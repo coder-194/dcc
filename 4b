@@ -1,0 +1,234 @@
+4. alt
+
+Sure! Here's an **all-in-one guide** to setting up a **complete Jenkins CI/CD pipeline** with **SonarQube integration**, using **Maven**, **unit tests**, **integration tests**, **quality gates**, and **deployment**. This includes everything: Docker commands, Jenkins setup, credentials, and a full working `Jenkinsfile`.
+
+---
+
+# ✅ **Complete Jenkins CI/CD Pipeline with SonarQube Integration**
+
+---
+
+## 🧱 Prerequisites
+
+* Docker & Docker Compose installed
+* Jenkins installed (or run via Docker)
+* GitHub repo with Maven project
+* Internet access for downloading plugins
+
+---
+
+## 🐳 Step 1: Run SonarQube via Docker
+
+```bash
+docker run -d --name sonar -p 9000:9000 sonarqube:lts-community
+```
+
+* Access SonarQube UI: [http://localhost:9000](http://localhost:9000)
+* Default login: `admin / admin`
+
+### 🔐 Generate SonarQube Token
+
+1. Login → My Account → **Security** tab → **Generate Token**
+2. Copy token (e.g., `abc123sonartoken`) for later use in Jenkins
+
+---
+
+## ⚙️ Step 2: Install & Configure Jenkins with SonarQube
+
+### 🧩 Install Jenkins Plugins
+
+Go to **Jenkins Dashboard** → **Manage Jenkins** → **Manage Plugins**
+Install:
+
+* SonarQube Scanner
+* Pipeline
+* Git
+* Maven Integration
+
+---
+
+### 🔧 Configure Tools in Jenkins
+
+Go to: **Manage Jenkins → Global Tool Configuration**
+
+#### ➤ Maven
+
+* Click “Add Maven”
+* Name: `Maven_3`
+* Auto install: ✅
+
+#### ➤ SonarQube Scanner
+
+* Click “Add SonarQube Scanner”
+* Name: `SonarScanner`
+* Auto install: ✅
+
+---
+
+### 🔐 Configure SonarQube Server
+
+**Manage Jenkins → Configure System**
+
+* Scroll to **SonarQube Servers**
+
+  * Name: `SonarQube`
+  * Server URL: `http://localhost:9000`
+  * Add token as credentials:
+
+    * Type: **Secret text**
+    * ID: `sonar-token-id`
+    * Secret: *(paste token)*
+
+---
+
+## 📁 Step 3: Create Jenkins Pipeline Job
+
+1. **Dashboard → New Item**
+2. Name: `My-CI-Pipeline`
+3. Type: `Pipeline`
+4. Click OK
+
+---
+
+## ✏️ Step 4: Jenkinsfile (All-in-One CI/CD Script)
+
+Paste the following under **Pipeline → Pipeline Script**:
+
+```groovy
+pipeline {
+  agent any
+
+  tools {
+    maven 'Maven_3'
+  }
+
+  environment {
+    SONARQUBE_URL = 'http://localhost:9000'
+    SONARQUBE_SERVER = 'SonarQube'
+    SONAR_TOKEN = credentials('sonar-token-id') // Jenkins credential ID
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps {
+        git branch: 'main', url: 'https://github.com/your-repo/sample-project.git' // Replace with your repo
+      }
+    }
+
+    stage('Build') {
+      steps {
+        sh 'mvn clean package'
+      }
+    }
+
+    stage('Unit Tests') {
+      steps {
+        sh 'mvn test'
+      }
+    }
+
+    stage('SonarQube Analysis') {
+      steps {
+        withSonarQubeEnv(SONARQUBE_SERVER) {
+          sh """
+            mvn sonar:sonar \
+              -Dsonar.projectKey=sample-project \
+              -Dsonar.host.url=${SONARQUBE_URL} \
+              -Dsonar.login=${SONAR_TOKEN}
+          """
+        }
+      }
+    }
+
+    stage('Quality Gate') {
+      steps {
+        timeout(time: 1, unit: 'MINUTES') {
+          waitForQualityGate abortPipeline: true
+        }
+      }
+    }
+
+    stage('Integration Tests') {
+      steps {
+        sh 'mvn verify'
+      }
+    }
+
+    stage('Deploy') {
+      steps {
+        sh 'mvn deploy'
+      }
+    }
+  }
+}
+```
+
+---
+
+## ▶️ Step 5: Run Your Pipeline
+
+1. Click **"Build Now"**
+2. Monitor Console Output
+
+   * Check for:
+
+     * ✅ Maven build success
+     * ✅ SonarQube analysis
+     * ✅ Quality Gate approval
+     * ✅ Integration & deploy steps
+3. Go to [http://localhost:9000](http://localhost:9000) to view project metrics
+
+---
+
+## ✅ Final Outcome
+
+* Full CI/CD pipeline using Jenkins
+* SonarQube performs static code analysis
+* Fails pipeline if quality gate fails
+* Runs unit and integration tests
+* Deploys Maven project
+
+---
+
+## 🛡️ Optional: Use Docker Compose for Jenkins + SonarQube
+
+Here’s a quick `docker-compose.yml` for Jenkins + SonarQube (optional):
+
+```yaml
+version: '3'
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts
+    ports:
+      - 8080:8080
+    volumes:
+      - jenkins_home:/var/jenkins_home
+
+  sonarqube:
+    image: sonarqube:lts-community
+    ports:
+      - 9000:9000
+    environment:
+      - sonar.web.javaAdditionalOpts=-server -Xmx512m -Xms128m
+
+volumes:
+  jenkins_home:
+```
+
+---
+
+## 📌 Final Tips
+
+* Always commit your `Jenkinsfile` to the repo (`git add Jenkinsfile`)
+* Use branches (`dev`, `main`) to separate dev & prod pipelines
+* Configure email or Slack notifications for build status
+
+---
+
+Let me know if you want:
+
+* A Dockerized Maven project template
+* A sample GitHub repo to test this on
+* How to integrate with GitHub webhooks or Slack alerts
