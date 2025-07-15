@@ -1,0 +1,80 @@
+2
+
+Check Docker version:
+docker --version
+
+Get system-wide Docker information:
+docker info
+
+List running containers:
+docker ps
+
+List all containers (including stopped):
+docker ps –a
+
+List Docker images:
+docker images
+
+Pull an image from Docker Hub:
+docker pull Ubuntu
+
+Run a Docker container interactively:
+docker run -it Ubuntu
+
+Stop a running container:
+docker stop <container_id>
+
+Remove a container:
+docker rm <container_id>
+
+Remove a Docker image:
+docker rmi <image_id>
+
+Build a Docker image from a Dockerfile:
+docker build -t <image_name> .
+
+docker pull alpine
+docker run -it alpine
+exit
+
+Run Containers with Other Operating Systems
+docker pull centos
+docker pull debian
+docker pull fedora
+
+[--app.py--]
+from flask import Flask
+app = Flask(__name__)
+@app.route('/')
+def hello_world():
+    return 'Hello, Docker!'
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+
+[--Dockerfile--]
+FROM python:3.8-slim
+WORKDIR /app
+COPY app.py .
+RUN pip install flask
+EXPOSE 5000
+CMD ["python", "app.py"]
+
+docker build -t python-flask-app .
+docker run -p 5000:5000 python-flask-app
+
+[open:]
+http://localhost:5000
+
+------------------------------------------------------------------------------------------------------------
+1. Create a Docker Hub Account: Go to Docker Hub and sign up for an account.
+2. Login to Docker Hub
+Use the following command to log in to Docker Hub:
+docker login
+Enter your Docker Hub credentials.
+3. Tag and Push the Image
+Tag the image you want to upload:
+docker tag python-flask-app <your_dockerhub_username>/python-flask-app
+Push the image to Docker Hub:
+docker push <your_dockerhub_username>/python-flask-app
+4. Pull Image from Docker Hub
+docker pull <your_dockerhub_username>/python-flask-app
