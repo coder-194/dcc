@@ -1,0 +1,271 @@
+4.2
+
+Great! Here's your **complete DevOps Guide** for **installing Jenkins**, **installing SonarQube**, **setting up integration**, and **building a pipeline** to run **SonarQube code analysis** using Jenkins on a **Windows system**, especially for Python or Maven projects.
+
+---
+
+# 🛠️ **DevOps Program 4 – Jenkins + SonarQube Integration (Complete Guide)**
+
+---
+
+## ✅ **1. Install Jenkins on Windows**
+
+### 🔽 Download & Install:
+
+1. Download Jenkins `.msi`:
+   👉 [https://www.jenkins.io/download/](https://www.jenkins.io/download/)
+2. Run `jenkins.msi`
+3. Click **Next → Next**
+4. Select: **Run Service as LocalSystem**
+5. Port: `8081` → Test port → **Next**
+6. If **Java not detected**, download JDK 21+:
+
+   * [Download JDK 21](https://www.oracle.com/java/technologies/downloads/#jdk21-windows)
+   * Install using `.msi`
+   * Take note of **installation path** (e.g., `C:\Program Files\Java\jdk-21`)
+7. In Jenkins install wizard, select the JDK path
+8. Click: **Install → Finish**
+
+---
+
+### 🔐 Unlock Jenkins:
+
+1. Open: `http://localhost:8081`
+2. Unlock with:
+
+```bash
+notepad.exe C:\ProgramData\Jenkins\.jenkins\secrets\initialAdminPassword
+```
+
+3. Paste password → Click **Continue**
+4. Choose: **Install Suggested Plugins**
+5. Create admin user:
+
+   * Username: `admin`
+   * Password: `admin` *(for demo only)*
+6. Use default URL → Click: **Start using Jenkins**
+
+---
+
+## ✅ **2. Install & Configure SonarQube**
+
+### 🔽 Download & Start:
+
+1. Download SonarQube:
+   👉 [https://www.sonarsource.com/products/sonarqube/downloads/](https://www.sonarsource.com/products/sonarqube/downloads/)
+2. Extract ZIP → Navigate to:
+
+   ```
+   sonarqube-<version>/bin/windows-x86-64/
+   ```
+3. Run: `StartSonar.bat` (Allow access)
+4. Open: [http://localhost:9000](http://localhost:9000)
+5. Login:
+
+   * Username: `admin`
+   * Password: `admin` → Update password to `Admin@123.456`
+
+---
+
+### 🔑 Generate Token for Jenkins:
+
+1. Go to: **My Account → Security → Generate Tokens**
+2. Name: `jenkins` → Set expiration: `Never`
+3. Copy the token (e.g., `squ_abcdef...`)
+   💡 Save this in Notepad — **one-time visibility only**
+
+---
+
+## ✅ **3. Jenkins: Install SonarQube Scanner & Setup**
+
+### 📦 Install Plugin:
+
+* Jenkins → **Manage Jenkins → Plugins**
+* Search: `SonarQube Scanner` → Install + Restart
+
+---
+
+### 🔧 Global Tool Configuration:
+
+* **Manage Jenkins → Global Tool Configuration**
+
+  * Add **SonarQube Scanner**:
+
+    * Name: `sonar`
+    * Auto-install ✅
+
+---
+
+### 🌐 Configure SonarQube Server:
+
+* Go to: **Manage Jenkins → Configure System**
+* In **SonarQube Servers**:
+
+  * Name: `sonar`
+  * URL: `http://localhost:9000`
+  * Add credentials:
+
+    * Type: `Secret Text`
+    * ID: `sonar`
+    * Secret: *(Paste token from earlier)*
+
+✅ Check: **Environment variables box**
+✅ Select credential under “Server Authentication Token”
+
+Click **Save**
+
+---
+
+## ✅ **4. Create and Run a Jenkins Pipeline (SonarQube Code Analysis)**
+
+### 📁 Create `helloworld.py`:
+
+* Save this Python file at:
+
+```bash
+C:\Users\Admin\Desktop\helloworld.py
+```
+
+```python
+def DoSomething():
+    password = "123456"
+    print("Hi")
+    eval("print('Insecure')")
+```
+
+---
+
+### 🔧 Jenkins Pipeline Setup:
+
+1. Jenkins → **New Item → Pipeline**
+
+   * Name: `DO-P4`
+   * Click OK
+
+2. **Pipeline Script**:
+
+```groovy
+pipeline {
+    agent any
+    stages {
+        stage('Prepare Workspace') {
+            steps {
+                // Copy Python code to workspace
+                bat 'xcopy /s /e /y "C:\\Users\\Admin\\Desktop\\helloworld.py" .'
+            }
+        }
+
+        stage('Code Analysis') {
+            environment {
+                scannerHome = tool 'sonar' // The name you gave in Global Tool Configuration
+            }
+            steps {
+                script {
+                    withSonarQubeEnv('sonar') {
+                        bat """
+                            ${scannerHome}\\bin\\sonar-scanner.bat ^
+                            -Dsonar.projectKey=hellopy ^
+                            -Dsonar.projectName=HelloWorldPython ^
+                            -Dsonar.projectVersion=1.0 ^
+                            -Dsonar.sources=.
+                        """
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+3. Click **Save**
+4. Click **Build Now**
+
+---
+
+### 📊 View SonarQube Analysis:
+
+1. Go to: [http://localhost:9000](http://localhost:9000)
+2. Project: `HelloWorldPython`
+3. See:
+
+   * Code quality issues
+   * Vulnerabilities (e.g., `eval`, hardcoded password)
+   * Code smells, duplications
+
+---
+
+## ✅ **Alternative: Java/Maven Jenkinsfile**
+
+If your project is Maven-based, use this Jenkinsfile instead:
+
+```groovy
+pipeline {
+    agent any
+    tools {
+        maven 'Maven_3'
+    }
+    environment {
+        SONARQUBE_SERVER = 'sonar'
+        SONAR_TOKEN = credentials('sonar')
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/your-repo.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+        stage('Unit Test') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv(SONARQUBE_SERVER) {
+                    sh """
+                    mvn sonar:sonar \
+                        -Dsonar.projectKey=my-app \
+                        -Dsonar.host.url=http://localhost:9000 \
+                        -Dsonar.login=${SONAR_TOKEN}
+                    """
+                }
+            }
+        }
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 1, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh 'mvn deploy'
+            }
+        }
+    }
+}
+```
+
+---
+
+## 🎯 Final Output
+
+| Step                     | Outcome                             |
+| ------------------------ | ----------------------------------- |
+| Jenkins Installed        | ✅ Running on `localhost:8081`       |
+| SonarQube Installed      | ✅ Running on `localhost:9000`       |
+| Token Generated          | ✅ Added to Jenkins as secret        |
+| Pipeline Created         | ✅ Scans Python or Maven code        |
+| Code Analyzed            | ✅ SonarQube reports visible         |
+| Security Issues Detected | ✅ e.g., `eval`, hardcoded passwords |
+| Quality Gate Applied     | ✅ Pipeline fails if gate not met    |
+
+---
+
+Would you like a **downloadable PDF** version of this guide or a **Docker Compose setup** for Jenkins + SonarQube?
