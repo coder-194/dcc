@@ -1,0 +1,221 @@
+4.
+Installation of Jenkins
+1. Download the ‘Jenkins’ Executeable from - “https://www.jenkins.io/download/”
+(Windows - .msi)
+2. Run the ‘jenkins.msi’ file
+
+3. Click on ‘Next’
+
+4. Click on ‘Next’
+
+5. Select ‘Run Service as LocalSystem’, Click on ‘Next’
+
+6. Enter Port Number as ‘8081’ and Test Port (To Check for any Port Conflicts), Click on
+‘Next’
+
+7. If we cannot see any folder ‘Java’, We will have to install Java JDK (Should not be
+less than JDK 21)
+URL For Download: https://www.oracle.com/in/java/technologies/downloads/#jdk21-windows
+Download the x64 MSI Installer
+Run the ‘msi’ file for Java JDK
+
+(i) Click on ‘Next’
+
+(ii) Take note of the ‘Installation Path’ as highlighted and Click on ‘Next’
+
+If a popup appears to ‘Make Change in the Hard-Drive’, Click on ‘Yes’
+
+(iii) JDK Installed Successfully! (Click on ‘Close’)
+
+8. Make sure to add the Path of the Java JDK for Jenkins — as highlighted in Step-7 (ii)
+Click on ‘Java’ in ‘C:\Program Files\’, and then Click on ‘jdk-21’
+
+Click on ‘Ok’, then Click on ‘Next’
+9. Click on ‘Next’
+10. Click on ‘Install’
+
+If a popup appears to ‘Make Change in the Hard-Drive’, Click on ‘Yes’
+
+11. Installation Successful! (Click on ‘Finish’)
+
+12. Admin Account Creation in Jenkins Web-UI
+
+Type ‘http://localhost:8081’, It will ask us to Unlock Jenkins using a Temporary
+passwords present in the Specified Folder.
+
+##go to folder given on the page##
+you will find the key##
+
+Paste the password in the Web-UI and Click on ‘Continue’
+
+Click on ‘Install Suggested Plugins’ Box (This might take a while)
+
+Plugin Installation in Progress
+
+Creating ‘admin’ credentials, let the Password be ‘admin’ as well ( [X] - Not for
+Production!)
+## both id and pass admin##
+
+E-mail address for this##
+admin@local.com
+
+Let the Jenkins URL be the Same as ‘Default’
+
+##in Instance Config##
+url:http://localhost:8081/
+
+Jenkins is ready, Click on ‘Start using Jenkins’
+
+## now go to jenkins##
+
+13. Install the ‘SonarQube Scanner’ Plugin in Jenkins
+Click on ‘Manage Jenkins’
+
+Click on ‘Plugins’(on dashboard)
+
+Click on ‘Available Jenkins’, Search for ‘SonarQube Scanner’ (Click on the Checkbox
+and Install)
+
+Once the Plugins have the ‘Success’ Tag — Click on ‘Restart’ Checkbox
+
+Login back into Jenkins (Username: admin, Password: admin)
+
+=======================================================================
+Installation of SonarQube Server
+
+1. Download the ‘SonarQube Server’ Executeable from:
+“https://www.sonarsource.com/products/sonarqube/downloads/”
+Under “Community Build” > “Download for free” > “Click on Download Only”
+(Windows - .zip folder)
+
+
+2. Unzip the ‘sonarqube-<version>.zip’ file to Folder.
+
+3. Go to Specified Path,
+sonarqube-25.5.0.107428/
+└── sonarqube-25.5.0.107428/
+└── bin/
+└── windows-x86-64/
+
+4. Click on ‘StartSonar.bat’ file, This will execute the SonarQube Server
+
+A popup of “Windows Protected your PC” will appear, Click on “More info”, Click on
+“Run anyway”
+
+Click on “Allow access” in the Windows Security Alert Popup
+
+4. Go to “http://localhost:9000” (Login Page will appear for SonarQube Server)
+
+Credemtials — Username: admin, Password: admin
+Update password for ‘admin’ user: (Set — New Password: ‘Admin@123.456’)
+
+5. Generate Token for SonarQube Server to be used in Jenkins
+
+Go the the ‘Administration’ Tab,
+
+Click on ‘Security’ tab and then Click on ‘Update tokens’ (as highlighted in the
+screenshot)
+
+Add the Token name as ‘jenkins’ and set expiration ‘Never’, Click on Generate Buttion
+(Make sure to immediately copy the token and paste it in notepad since it will not be
+visible again - One Time)
+======================================================================================
+Setting Up the Jenkins-SonarQube
+Configuration
+
+1. Login into Jenkins Web-UI (http://localhost:8081)
+2. Click on ‘Manage Jenkins’ > ‘Tools’
+3. We will now setup the SonnarQube Scanner which will be scanning our code.
+Click on ‘Add SonarQube Scanner’ (Highlighted in Screenshot)
+
+Add the name as ‘sonar’ and Click on ‘Save’
+
+4. We will now add the Credentials as URL of the SonarQube server in the Environment
+Variable of Jenkins (Manage Jenkins > System > SonarQube Servers [Environment
+Variables])
+
+Check the Environment Variable Box under ‘SonarQube servers’, and Click on ‘Add
+SonarQube’
+
+##Click on the ‘+ Add’ button as Highlighted and Click on ‘Jenkins Credential Provider’:
+(i) Kind: ‘Secret text’
+(ii) Secret: ‘squ_****’(which have from before)
+(iii) ID: ‘sonar’
+##
+Click on ‘Add’
+
+Select from the Drop-Down Menu in ‘Server Authentication Token’ —> ‘sonar’
+Click on ‘Save’
+=============================================================================
+Setting Up the Jenkins Pipeline
+1. Initial Steps for Creating a Jenkins Pipeline
+Click on ‘New Item’
+Enter the Name of the Item ‘DO-P4’
+Click on ‘Pipeline’
+Click on ‘Ok’
+
+now add the script
+
+2. Copy the Code below for the Pipeline Script
+pipeline script:
+pipeline {
+    agent any
+
+    stages {
+        stage('Prepare Workspace') {
+            steps {
+                // Copy local code using Windows command
+                bat 'xcopy /s /e /y "C:\\Users\\Admin\\Desktop\\helloworld.py" .'
+            }
+        }
+
+        stage('Code Analysis') {
+            environment {
+                scannerHome = tool 'sonar'
+            }
+            steps {
+                script {
+                    withSonarQubeEnv('sonar') {
+                        bat """
+                            ${scannerHome}\\bin\\sonar-scanner.bat ^
+                            -Dsonar.projectKey=your_project_key ^
+                            -Dsonar.projectName=your_project_name ^
+                            -Dsonar.projectVersion=1.0 ^
+                            -Dsonar.sources=.
+                        """
+                    }
+                }
+            }
+        }
+    }
+}
+
+NOTE: ** Make Sure the code path is correct (Specially Username) **
+Click on ‘Save’
+
+3. Make a python file: ‘helloworld.py’ in the Path Specified in the Pipleine Script
+(Highlighted)
+
+4. For running the Jenkins Pipeline, Click on ‘Build Now’(on jenkins dashboard>DO-P4)
+
+Right-Click on SonarQube as Highlighted in the above screenshot in a new tab.
+Once the Pipeline is executed, Click on ‘SonarQube’ for checking the Code Analysis
+Report.
+
+To Show the other testcase for SonarQube Analysis, Change the code in
+‘helloworld.py’
+
+def DoSomething():
+password = "123456"
+print("Hi")
+eval("print('Insecure')")
+
+add this aldready created py file and check
+
+Now Re-Run the Jenkins Pipeline (After saving the code in ‘helloworld.py’)
+(i) Click on ‘Build’ again
+
+(ii) Right-Click on SonarQube as Highlighted in the above screenshot in a new tab.
+
+(iii) Once the Pipeline is executed, Click on ‘SonarQube’ for checking the Code Analysis
+Report.
