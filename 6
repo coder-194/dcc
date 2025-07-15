@@ -1,0 +1,30 @@
+6
+
+delete pom.xml
+
+gradle releases
+binary only
+
+setx GRADLE_HOME "C:\Gradle\gradle-8.x.x" /M
+setx PATH "%PATH%;%GRADLE_HOME%\bin" /M
+gradle -v
+
+[---File 1: build.gradle---]
+plugins {
+    id 'java'
+}
+group = 'com.example'
+version = '1.0-SNAPSHOT'
+repositories {
+    mavenCentral()
+}
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}
+
+[---File 2: settings.gradle---]
+rootProject.name = 'demo-project
+
+gradle build
+gradle test
+java -cp build/libs/demo-project-1.0-SNAPSHOT.jar com.example.App
